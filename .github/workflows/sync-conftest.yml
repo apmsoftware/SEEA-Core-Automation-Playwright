@@ -1,0 +1,49 @@
+name: Sync conftest.py to consumer repo
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'conftest.py'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-conftest
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout engine repo
+        uses: actions/checkout@v4
+
+      - name: Checkout consumer repo
+        uses: actions/checkout@v4
+        with:
+          repository: apmsoftware/SEEA-Playwright-Consumer
+          token: ${{ secrets.CROSS_REPO_TOKEN }}
+          path: consumer
+
+      - name: Copy conftest.py
+        run: |
+          cp conftest.py consumer/tests/conftest.py
+
+      - name: Commit and push changes
+        run: |
+          cd consumer
+
+          git config user.name "apmsoftware"
+          git config user.email "anishprashantmisal@gmail.com"
+
+          git add tests/conftest.py
+
+          git diff --cached --quiet && echo "No changes detected" && exit 0
+
+          git commit -m "Auto-sync conftest.py from engine repo"
+
+          git push origin HEAD:main
